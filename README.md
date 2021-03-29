@@ -1,4 +1,7 @@
 # Asgard DNA
+
+![](etc/logo.png)
+
 By going through these steps, it assumes you have the following in place:
 
  - Cloudflare API token [[more info](https://developers.cloudflare.com/api/tokens/create)]
