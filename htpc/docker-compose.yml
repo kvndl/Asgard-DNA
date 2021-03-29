@@ -1,0 +1,617 @@
+---
+version: "3.3"
+services:
+
+##################
+# Proxy Services #
+##################
+
+   traefik:
+      image: traefik:v2.0
+      container_name: traefik
+      restart: unless-stopped
+      security_opt:
+         - no-new-privileges:true
+      networks:
+         - proxy
+      ports:
+         - 80:80
+         - 443:443
+      volumes:
+         - /etc/localtime:/etc/localtime:ro
+         - /var/run/docker.sock:/var/run/docker.sock:ro
+         - ${DOCKER_DIR}/traefik/data/traefik.yml:/traefik.yml:ro
+         - ${DOCKER_DIR}/traefik/data/acme.json:/acme.json
+         - ${DOCKER_DIR}/traefik/data/config.yml:/config.yml:ro
+         - ${DOCKER_DIR}/traefik/data/traefik.log:/traefik.log
+      environment:
+         - CF_API_EMAIL=${CF_API_EMAIL}
+         - CF_API_KEY=${CF_API_KEY}
+      labels:
+         ## Traefik
+         - traefik.enable=true
+         ## Routers Rules
+         - traefik.http.routers.traefik-rtr.rule=Host(`traefik.${DOMAINNAME}`)
+         - traefik.http.routers.traefik-rtr.entrypoints=https
+         - traefik.http.routers.traefik-rtr.service=api@internal
+         - traefik.http.routers.traefik-rtr.tls=true
+         - traefik.http.routers.traefik-rtr.tls.certresolver=cloudflare
+         - traefik.http.routers.traefik-rtr.middlewares=traefik-auth
+         ## Middlewares Rules
+         - traefik.http.middlewares.redirect-to-https.redirectscheme.scheme=http
+         - traefik.http.middlewares.traefik-auth.basicauth.users=${HTTP_ENCRYPTED_CREDS}
+         ## Global HTTPS Redirect
+         - traefik.http.routers.http-catchall.rule=hostregexp(`{host:.+}`)
+         - traefik.http.routers.http-catchall.entrypoints=https
+         - traefik.http.routers.http-catchall.middlewares=redirect-to-https
+
+   miniflux:
+      container_name: miniflux
+      image: miniflux/miniflux:latest
+      restart: unless-stopped
+      security_opt:
+         - no-new-privileges:true
+      ports:
+         - 8081:8080
+      networks:
+         - proxy
+      volumes:
+         - /etc/localtime:/etc/localtime:ro
+      depends_on:
+         - postgres
+      environment:
+         - DATABASE_URL=${MINIFLUX_DB_CONN_STRING}
+         - RUN_MIGRATIONS=1
+         - CREATE_ADMIN=1
+         - ADMIN_USERNAME=${MINIFLUX_ADMIN_USER}
+         - ADMIN_PASSWORD=${MINIFLUX_ADMIN_PASS}
+      labels:
+         ## Traefik
+         - traefik.enable=true
+         ## Routers Rules
+         - traefik.http.routers.rss-secure.rule=Host(`rss.${DOMAINNAME}`)
+         - traefik.http.routers.rss-secure.entrypoints=https
+         - traefik.http.routers.rss-secure.tls=true
+         - traefik.http.routers.rss-secure.tls.certresolver=http
+         ## Load Balance
+         - traefik.http.services.rss-secure.loadbalancer.server.port=8080
+         
+   adminer:
+      container_name: adminer
+      image: adminer
+      restart: unless-stopped
+      ports:
+         - 8083:8080
+      security_opt:
+         - no-new-privileges:true
+      networks:
+         - proxy
+      volumes:
+         - /etc/localtime:/etc/localtime:ro
+      labels:
+         ## Traefik
+         - traefik.enable=true
+         ## Router Rules
+         - traefik.http.routers.adminer-secure.entrypoints=https
+         - traefik.http.routers.adminer-secure.rule=Host(`adminer.${DOMAINNAME}`)
+         - traefik.http.routers.adminer-secure.tls=true
+         - traefik.http.routers.adminer-secure.tls.certresolver=http
+         - traefik.http.routers.adminer-secure.service=adminer
+         ## Load Balance
+         - traefik.http.services.adminer.loadbalancer.server.port=8080
+         ## Basic Auth
+         - traefik.http.routers.adminer-secure.middlewares=adminer-auth
+         - traefik.http.middlewares.adminer-auth.basicauth.users=${HTTP_ENCRYPTED_CREDS}
+
+   redis:
+      image: redis:latest
+      container_name: redis
+      restart: always
+      networks:
+         - proxy
+      volumes:
+         - redis:/var/lib/redis
+
+   nextcloud:
+      image: linuxserver/nextcloud:latest
+      container_name: nextcloud
+      restart: unless-stopped
+      networks:
+         - proxy
+      depends_on:
+         - postgres
+         - redis
+      ports:
+         - 81:80
+      volumes:
+         - ${DOCKER_DIR}/nextcloud:/config
+         - ${NC_DATA_DIR}:/data
+         - /etc/localtime:/etc/localtime:ro
+         - nextcloud-www:/var/www/html
+      labels:
+         ## Traefik
+         - traefik.enable=true
+         ## Routers
+         - traefik.http.routers.cloud-secure.rule=Host(`cloud.${DOMAINNAME}`)
+         - traefik.http.routers.cloud-secure.middlewares=cloud,cloud_dav,cloud_wellknown
+         - traefik.http.routers.cloud-secure.entrypoints=https
+         - traefik.http.routers.cloud-secure.tls=true
+         - traefik.tls.routers.cloud-secure.tls.passthrough=https
+         - traefik.http.routers.cloud-secure.tls.certresolver=http
+         - traefik.http.routers.cloud-secure.service=cloud
+         ## Middlewares - headers
+         - traefik.http.middlewares.cloud.headers.stsSeconds=155520011
+         - traefik.http.middlewares.cloud.headers.stsIncludeSubdomains=true
+         - traefik.http.middlewares.cloud.headers.stsPreload=true
+         - traefik.http.middlewares.cloud.headers.contentTypeNosniff=true
+         - traefik.http.middlewares.cloud.headers.browserXSSFilter=true
+         ## Middlewares - redirect
+         - traefik.http.middlewares.cloud_dav.replacepathregex.regex=^/.well-known/ca(l|rd)dav
+         - traefik.http.middlewares.cloud_dav.replacepathregex.replacement=/remote.php/dav/
+         - traefik.http.middlewares.cloud_wellknown.replacepathregex.regex=^(/.well-known.*)
+         - traefik.http.middlewares.cloud_wellknown.replacepathregex.replacement=/index.php$${1}
+         ## Load Balance
+         - traefik.http.services.cloud.loadbalancer.server.port=80
+      environment:
+         - PUID=${NC_UID}
+         - PGID=${NC_GID}
+         - POSTGRES_DB=${NC_PSQL_DB}
+         - POSTGRES_USER=${NC_PSQL_USER}
+         - POSTGRES_PASSWORD=${NC_PSQL_PASS}
+         - POSTGRES_HOST=${NC_PSQL_HOST}
+         - NEXTCLOUD_HOSTNAME=${NEXTCLOUD_HOSTNAME}
+         - NEXTCLOUD_ADMIN_USER=${NEXTCLOUD_ADMIN_USER}
+         - NEXTCLOUD_ADMIN_PASSWORD=${NEXTCLOUD_ADMIN_PASSWORD}
+         - REDIS_HOST=${REDIS_HOST}
+         - NEXTCLOUD_TRUSTED_DOMAINS=${NC_DOMAIN}
+
+   plex:
+      image: ghcr.io/linuxserver/plex
+      container_name: plex
+      network_mode: host
+      environment:
+         - PUID=${HTPC}
+         - PGID=1001
+         - VERSION=latest
+      volumes:
+         - ${DOCKER_DIR}/htpc/plexmediaserver:/config
+         - ${TV_DIR}:/tv
+         - ${MOVIE_DIR}:/movies
+         - ${MUSIC_DIR}:/music
+      restart: unless-stopped
+         
+   tautulli:
+      image: ghcr.io/linuxserver/tautulli
+      container_name: tautulli
+      restart: unless-stopped
+      security_opt:
+         - no-new-privileges:true
+      networks:
+         - proxy
+      environment:
+         - PUID=${HTPC}
+         - PGID=1001
+         - TZ=${TZ}
+      volumes:
+         - ${DOCKER_DIR}/htpc/tautulli:/config
+         - /etc/localtime:/etc/localtime:ro
+         - ${DOCKER_DIR}/htpc/plexmediaserver/Library/Application\ Support/Plex\ Media\ Server/Logs:/logs
+      labels:
+         ## Traefik
+         - traefik.enable=true
+         ## Router Rules
+         - traefik.http.routers.tautulli-secure.entrypoints=https
+         - traefik.http.routers.tautulli-secure.rule=Host(`tautulli.${DOMAINNAME}`)
+         - traefik.http.routers.tautulli-secure.tls=true
+         - traefik.http.routers.tautulli-secure.tls.certresolver=http
+         - traefik.http.routers.tautulli-secure.service=tautulli
+         ## Load Balance
+         - traefik.http.services.tautulli.loadbalancer.server.port=8181
+
+   lidarr:
+      image: ghcr.io/linuxserver/lidarr:develop
+      container_name: lidarr
+      restart: unless-stopped
+      security_opt:
+         - no-new-privileges:true
+      networks:
+         - proxy
+      environment:
+         - PUID=${HTPC}
+         - PGID=1001
+         - TZ=${TZ}
+      volumes:
+         - ${DOCKER_DIR}/htpc/lidarr:/config
+         - ${MUSIC_DIR}:/music
+         - ${DL_DIR}:/downloads
+         - /etc/localtime:/etc/localtime:ro
+      labels:
+         ## Traefik
+         - traefik.enable=true
+         ## Router Rules
+         - traefik.http.routers.lidarr-secure.entrypoints=https
+         - traefik.http.routers.lidarr-secure.rule=Host(`lidarr.${DOMAINNAME}`)
+         - traefik.http.routers.lidarr-secure.tls=true
+         - traefik.http.routers.lidarr-secure.tls.certresolver=http
+         - traefik.http.routers.lidarr-secure.service=lidarr
+         ## Load Balance
+         - traefik.http.services.lidarr.loadbalancer.server.port=8686
+
+   jackett:
+      image: ghcr.io/linuxserver/jackett
+      container_name: jackett
+      restart: unless-stopped
+      security_opt:
+         - no-new-privileges:true
+      networks:
+         - proxy
+      environment:
+         - PUID=${UID}
+         - PGID=${UID}
+         - TZ=${TZ}
+      volumes:
+         - ${DOCKER_DIR}/htpc/jackett:/config
+         - ${DL_DIR}:/downloads
+         - /etc/localtime:/etc/localtime:ro
+      labels:
+         ## Traefik
+         - traefik.enable=true
+         ## Router Rules
+         - traefik.http.routers.jackett-secure.entrypoints=https
+         - traefik.http.routers.jackett-secure.rule=Host(`jackett.${DOMAINNAME}`)
+         - traefik.http.routers.jackett-secure.tls=true
+         - traefik.http.routers.jackett-secure.tls.certresolver=http
+         - traefik.http.routers.jackett-secure.service=jackett
+         ## Load Balance
+         - traefik.http.services.jackett.loadbalancer.server.port=9117
+
+   requestrr:
+      image: darkalfx/requestrr
+      container_name: requestrr
+      restart: unless-stopped
+      security_opt:
+         - no-new-privileges:true
+      networks:
+         - proxy
+      volumes:
+         - ${DOCKER_DIR}/htpc/requestrr:/root/config
+         - /etc/localtime:/etc/localtime:ro
+      labels:
+         ## Traefik
+         - traefik.enable=true
+         ## Router Rules
+         - traefik.http.routers.requestrr-secure.entrypoints=https
+         - traefik.http.routers.requestrr-secure.rule=Host(`requestrr.${DOMAINNAME}`)
+         - traefik.http.routers.requestrr-secure.tls=true
+         - traefik.http.routers.requestrr-secure.tls.certresolver=http
+         - traefik.http.routers.requestrr-secure.service=requestrr
+         ## Load Balance
+         - traefik.http.services.requestrr.loadbalancer.server.port=4545
+
+   ombi:
+      image: ghcr.io/linuxserver/ombi
+      container_name: ombi
+      restart: unless-stopped
+      security_opt:
+         - no-new-privileges:true
+      networks:
+         - proxy
+      environment:
+         - PUID=${UID}
+         - PGID=${UID}
+         - TZ=${TZ}
+      volumes:
+         - ${DOCKER_DIR}/htpc/ombi:/config
+         - /etc/localtime:/etc/localtime:ro
+      labels:
+         ## Traefik
+         - traefik.enable=true
+         ## Router Rules
+         - traefik.http.routers.ombi-secure.entrypoints=https
+         - traefik.http.routers.ombi-secure.rule=Host(`plexrequest.${DOMAINNAME}`)
+         - traefik.http.routers.ombi-secure.tls=true
+         - traefik.http.routers.ombi-secure.tls.certresolver=http
+         - traefik.http.routers.ombi-secure.service=ombi
+         ## Load Balance
+         - traefik.http.services.ombi.loadbalancer.server.port=3579
+
+   radarr:
+      image: ghcr.io/linuxserver/radarr:nightly
+      container_name: radarr
+      restart: unless-stopped
+      security_opt:
+         - no-new-privileges:true
+      networks:
+         - proxy
+      environment:
+         - PUID=${HTPC}
+         - PGID=1001
+         - TZ=${TZ}
+      volumes:
+         - ${DOCKER_DIR}/htpc/radarr:/config
+         - ${MOVIE_DIR}:/movies
+         - ${DL_DIR}:/downloads
+         - /etc/localtime:/etc/localtime:ro
+      labels:
+         ## Traefik
+         - traefik.enable=true
+         ## Router Rules
+         - traefik.http.routers.radarr-secure.entrypoints=https
+         - traefik.http.routers.radarr-secure.rule=Host(`radarr.${DOMAINNAME}`)
+         - traefik.http.routers.radarr-secure.tls=true
+         - traefik.http.routers.radarr-secure.tls.certresolver=http
+         - traefik.http.routers.radarr-secure.service=radarr
+         ## Load Balance
+         - traefik.http.services.radarr.loadbalancer.server.port=7878
+
+   sonarr:
+      image: ghcr.io/linuxserver/sonarr:develop
+      container_name: sonarr
+      restart: unless-stopped
+      security_opt:
+         - no-new-privileges:true
+      networks:
+         - proxy
+      environment:
+         - PUID=${HTPC}
+         - PGID=1001
+         - TZ=${TZ}
+      volumes:
+         - ${DOCKER_DIR}/htpc/sonarr:/config
+         - ${TV_DIR}:/tv
+         - ${DL_DIR}:/downloads
+         - /etc/localtime:/etc/localtime:ro
+      labels:
+         ## Traefik
+         - traefik.enable=true
+         ## Router Rules
+         - traefik.http.routers.sonarr-secure.entrypoints=https
+         - traefik.http.routers.sonarr-secure.rule=Host(`sonarr.${DOMAINNAME}`)
+         - traefik.http.routers.sonarr-secure.tls=true
+         - traefik.http.routers.sonarr-secure.tls.certresolver=http
+         - traefik.http.routers.sonarr-secure.service=sonarr
+         ## Load Balance
+         - traefik.http.services.sonarr.loadbalancer.server.port=8989
+
+   portainer:
+      image: portainer/portainer:latest
+      container_name: portainer
+      restart: unless-stopped
+      security_opt:
+         - no-new-privileges:true
+      networks:
+         - proxy
+      volumes:
+         - /etc/localtime:/etc/localtime:ro
+         - /var/run/docker.sock:/var/run/docker.sock:ro
+         - ${DOCKER_DIR}/portainer/data:/data
+      labels:
+         ## Traefik
+         - traefik.enable=true
+         ## Router Rules
+         - traefik.http.routers.portainer-secure.entrypoints=https
+         - traefik.http.routers.portainer-secure.rule=Host(`portainer.${DOMAINNAME}`)
+         - traefik.http.routers.portainer-secure.tls=true
+         - traefik.http.routers.portainer-secure.tls.certresolver=http
+         - traefik.http.routers.portainer-secure.service=portainer
+         ## Load Balance
+         - traefik.http.services.portainer.loadbalancer.server.port=9000
+
+   bookstack:
+      image: ghcr.io/linuxserver/bookstack
+      container_name: bookstack
+      restart: unless-stopped
+      security_opt:
+         - no-new-privileges:true
+      depends_on: 
+         - mariadb
+      ports:
+         - 6875:80
+      security_opt:
+         - no-new-privileges:true
+      networks:
+         - proxy
+      volumes:
+         - /etc/localtime:/etc/localtime:ro
+         - ${DOCKER_DIR}/bookstack:/config
+      environment:
+         - PUID=${UID}
+         - PGID=${GID}
+         - APP_URL=${DOMAINNAME}
+         - DB_HOST=${DB_HOST}
+         - DB_USER=${DB_USER}
+         - DB_PASS=${HTTP_ENCRYPTED_PASS}
+         - DB_DATABASE=${DB_DATABASE}
+      labels:
+         ## Traefik
+         - traefik.enable=true
+         ## Router Rules
+         - traefik.http.routers.bookstack-secure.entrypoints=https
+         - traefik.http.routers.bookstack-secure.rule=Host(`docs.${DOMAINNAME}`)
+         - traefik.http.routers.bookstack-secure.tls=true
+         - traefik.http.routers.bookstack-secure.tls.certresolver=http
+         - traefik.http.routers.bookstack-secure.service=bookstack
+         ## Load Balance
+         - traefik.http.services.bookstack.loadbalancer.server.port=80
+
+################
+# VPN Services #
+################
+
+   gluetun:
+      image: qmcgaw/gluetun
+      container_name: gluetun
+      cap_add:
+         - NET_ADMIN
+      networks:
+         - vpn
+      ports:
+         - 8889:8888/tcp
+         - 8002:8000/tcp
+         # Deluge UI
+         - 8112:8112
+         # Qbit UI
+         - 6881:6881
+         - 8080:8080
+      volumes:
+         - ${DOCKER_DIR}/htpc/gluetun:/gluetun
+      environment:
+         - VPNSP=mullvad
+         - TZ=${TZ}
+         - COUNTRY=USA
+         - CITY=Chicago IL
+         - ISP=Quadranet
+         - OPENVPN_USER=${OPENVPN_USER}
+      restart: unless-stopped
+
+   deluge:
+      image: linuxserver/deluge
+      container_name: deluge
+      network_mode: service:gluetun
+      restart: unless-stopped
+      security_opt:
+         - no-new-privileges:true
+      environment:   
+         - PUID=${HTPC}
+         - PGID=${UID}
+         - TZ=${TZ}
+      volumes:
+         - ${DOCKER_DIR}/vpn/deluge:/config
+         - /mnt/Singularity/gateway:/downloads
+      labels:
+         ## Traefik
+         - traefik.enable=true
+         ## Router Rules
+         - traefik.http.routers.deluge-secure.entrypoints=https
+         - traefik.http.routers.deluge-secure.rule=Host(`deluge.${DOMAINNAME}`)
+         - traefik.http.routers.deluge-secure.tls=true
+         - traefik.http.routers.deluge-secure.tls.certresolver=cloudflare
+         - traefik.http.routers.deluge-secure.service=deluge
+         ## Load Balance
+         - traefik.http.services.deluge.loadbalancer.server.port=8112
+
+   qbit:
+      image: ghcr.io/linuxserver/qbittorrent
+      container_name: qbit
+      restart: unless-stopped
+      network_mode: service:gluetun
+      volumes:
+         - /etc/localtime:/etc/localtime:ro
+         - ${DOCKER_DIR}/htpc/qbit:/config
+         - ${DL_DIR}:/downloads
+      environment:
+         - PUID=${UID}
+         - PGID=${GID}
+         - WEBUI_PORT=${QBIT_WEBUI_PORT}
+      labels:
+         ## Traefik
+         - traefik.enable=true
+         ## Router Rules
+         - traefik.http.routers.qbit-secure.entrypoints=https
+         - traefik.http.routers.qbit-secure.rule=Host(`qbit.${DOMAINNAME}`)
+         - traefik.http.routers.qbit-secure.tls=true
+         - traefik.http.routers.qbit-secure.tls.certresolver=cloudflare
+         - traefik.http.routers.qbit-secure.service=qbit
+         ## Load Balance
+         - traefik.http.services.qbit.loadbalancer.server.port=8080
+
+#####################
+# Database Services #
+#####################
+
+   postgres:
+      container_name: postgres
+      image: postgres:latest
+      restart: unless-stopped
+      security_opt:
+         - no-new-privileges:true
+      networks:
+         - proxy
+      environment:
+         - POSTGRES_USER=${POSTGRES_USER}
+         - POSTGRES_PASSWORD=${POSTGRES_PASSWORD}
+         - POSTGRES_DB=${POSTGRES_DB}
+      volumes:
+         - postgres:/var/lib/postgresql/data
+         - /etc/localtime:/etc/localtime:ro
+
+   influxdb:
+      image: influxdb:latest
+      container_name: influxdb
+      networks:
+         - proxy
+      security_opt:
+         - no-new-privileges:true
+      restart: unless-stopped
+      ports:
+         - 8086:8086
+      volumes:
+         - influxdb:/var/lib/influxdb
+         - /etc/localtime:/etc/localtime:ro
+      environment: 
+         - DOCKER_INFLUXDB_INIT_USERNAME=${DOCKER_INFLUXDB_INIT_USERNAME}
+         - DOCKER_INFLUXDB_INIT_PASSWORD=${DOCKER_INFLUXDB_INIT_PASSWORD}
+         - DOCKER_INFLUXDB_INIT_ORG=${DOCKER_INFLUXDB_INIT_ORG}
+         - DOCKER_INFLUXDB_INIT_BUCKET=${DOCKER_INFLUXDB_INIT_BUCKET}
+      labels:
+         ## Traefik
+         - traefik.enable=true
+         ## Router Rules
+         - traefik.http.routers.influx-secure.entrypoints=https
+         - traefik.http.routers.influx-secure.rule=Host(`influx.${DOMAINNAME}`)
+         - traefik.http.routers.influx-secure.tls=true
+         - traefik.http.routers.influx-secure.tls.certresolver=http
+         - traefik.http.routers.influx-secure.service=influx
+         ## Load Balance
+         - traefik.http.services.influx.loadbalancer.server.port=8086
+         ## Basic Auth
+         - traefik.http.routers.influx-secure.middlewares=influx-auth
+         - traefik.http.middlewares.influx-auth.basicauth.users=${HTTP_ENCRYPTED_CREDS}
+
+   mariadb:
+      image: ghcr.io/linuxserver/mariadb:alpine
+      container_name: mariadb
+      restart: unless-stopped
+      security_opt:
+         - no-new-privileges:true
+      ports:
+         - 3306:3306
+      networks: 
+         - proxy
+      volumes:
+         - mariadb:/config
+         - /etc/localtime:/etc/localtime:ro
+      environment:
+         - PUID=${UID}
+         - PGID=${GID}
+         - MYSQL_ROOT_PASSWORD=${SQL_PASSWORD}
+         - TZ=${TZ}
+         - MYSQL_DATABASE=${SQL_DATABASE}
+         - MYSQL_USER=${SQL_USER}
+         - MYSQL_PASSWORD=${SQL_PASSWORD}
+
+##############
+# Networking #
+##############
+
+networks:
+   proxy:
+      external: true
+   vpn:
+      external: true
+
+###########
+# Volumes #
+###########
+
+volumes:
+   postgres:
+      external: true
+   influxdb:
+      external: true
+   mariadb:
+      external: true
+   redis:
+      external: true
+   nextcloud-www:
+      external: true

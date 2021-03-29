@@ -1,0 +1,39 @@
+#### 
+# RENAME FILE TO 'traefik.yml' BEFORE DEPLOYING
+####
+api:
+  dashboard: true
+
+entryPoints:
+  http:
+    address: ":80"
+  https:
+    address: ":443"
+
+providers:
+  docker:
+    endpoint: "unix:///var/run/docker.sock"
+    exposedByDefault: false
+  file:
+    filename: /config.yml
+
+certificatesResolvers:
+  cloudflare:
+    acme:
+      email: <<email address here>>
+      storage: acme.json
+      dnsChallenge:
+        provider: cloudflare
+        resolvers:
+          - "1.1.1.1:53"
+          - "1.0.0.1:53"
+  http:
+    acme:
+      email: <<email address here>>
+      storage: acme.json
+      httpChallenge:
+        entryPoint: http
+
+log:
+  filePath: "/traefik.log"
+  level: INFO

@@ -1,0 +1,59 @@
+DOMAINNAME="<<domain.com>>"
+OPENVPN_USER="<<mullvad account #>>"
+
+TZ="<<Country/City>>"
+
+POSTGRES_USER="postgres"
+POSTGRES_PASSWORD="<<secure pass>>"
+POSTGRES_DB="postgres"
+
+SQL_USER="maria"
+SQL_PASSWORD="<<secure pass>>"
+SQL_DATABASE="maria"
+
+HTPC=<<htpc media uid>>
+UID=<<docker user uid>>
+GID=<<docker user gid>>
+
+MINIFLUX_ADMIN_USER="admin"
+MINIFLUX_ADMIN_PASS="<<secure pass>>"
+MINIFLUX_DB_CONN_STRING="postgres://miniflux:<<secure pass>>@postgres/miniflux?sslmode=disable"
+
+DOCKER_DIR="<<docker data directory>>"
+
+TV_DIR="<<htpc tv directory>>"
+MOVIE_DIR="<<htpc movie directory>>"
+MUSIC_DIR="<<htpc music directory>>"
+DL_DIR="<<htpc download directory>>"
+
+NC_DATA_DIR="<<nextcloud data directory>>"
+NC_PSQL_DB="nextcloud"
+NC_PSQL_USER="nextcloud"
+NC_PSQL_PASS="<<secure pass>>"
+NC_PSQL_HOST="postgres"
+NEXTCLOUD_HOSTNAME="<<cloud.domain.com>>"
+NEXTCLOUD_ADMIN_USER="admin"
+NEXTCLOUD_ADMIN_PASSWORD="<<secure pass>>"
+REDIS_HOST="redis"
+NC_DOMAIN="<<cloud.domain.com>>"
+TRUSTED_PROXIES="<<traefik proxy>>"
+NC_UID="<<nextcloud data user uid>>"
+NC_GID="<<nextcloud data user gid>>"
+
+DOCKER_INFLUXDB_INIT_USERNAME="<<custom username>>"
+DOCKER_INFLUXDB_INIT_PASSWORD="<<secure pass>>"
+DOCKER_INFLUXDB_INIT_ORG="<<custom org name>>"
+DOCKER_INFLUXDB_INIT_BUCKET="<<custom bucket name>>"
+
+CF_API_EMAIL="<<cloudflare email address>>"
+CF_API_KEY="<<cloudflare api key>>"
+
+HTTP_ENCRYPTED_CREDS="<<htpass user:pass format>>"
+HTTP_ENCRYPTED_PASS="<<htpass encrypted pass>>"
+
+APP_URL="<<https://docs.domain.com>>"
+DB_HOST="mariadb"
+DB_USER="bookstack"
+DB_DATABASE="bookstack"
+
+QBIT_WEBUI_PORT="8080"
