@@ -1,33 +1,61 @@
 # Asgard DNA
 By going through these steps, it assumes you have the following in place:
 
- - Cloudflare API token ([more info](https://developers.cloudflare.com/api/tokens/create))
+ - Cloudflare API token [[more info](https://developers.cloudflare.com/api/tokens/create)]
  - FQDN with relevant wildcard record
 
 ### What's Included
 When new applications/services are added, this list will dynamically update. Enjoy.
- - Databases (info)
-    - PostgreSQL
-    - MariaDB
-    - InfluxDB
- - Application Stack (info)
-    - Traefik - Dynamic Proxy
-    - Adminer - Database Management
-    - Portainer - Docker Management
-    - Redis - Memory Caching
-    - Nextcloud - Cloud/File Storage
-    - Plex - Media Processor
-    - Tautulli - Plex Monitoring
-    - Jackett - RSS Ingestion
-    - Requestrr - Chat Bot
-    - Ombi - Media Requesting
-    - Radarr - Movie Manager
-    - Lidarr - Audio Manager
-    - Sonarr - TV Manager
-    - Miniflux - RSS Reader
-    - Bookstack - Documentation Aggregrator
- - VPN'd Services (info)
-    
+
+Databases [[info](https://github.com/sch3p/Asgard-DNA/blob/master/README.md)]
+
+- [PostgreSQL](https://www.postgresql.org)
+
+- [MariaDB](https://mariadb.org/)
+
+- [InfluxDB](https://www.influxdata.com/)
+
+Application Stack [[info](https://github.com/sch3p/Asgard-DNA/blob/master/README.md)]
+   
+   - [Traefik](https://traefik.io/) - Dynamic Proxy
+   
+   - [Adminer](https://www.adminer.org/) - Database Management
+   
+   - [Portainer](https://www.portainer.io/) - Docker Management
+   
+   - [Redis](https://redis.io/) - Memory Store
+   
+   - [Nextcloud](https://nextcloud.com/) - Cloud/File Storage
+   
+   - [Plex](https://www.plex.tv/) - Media Processor
+   
+   - [Tautulli](https://tautulli.com/) - Plex Monitoring
+   
+   - [Jackett](https://github.com/Jackett/Jackett) - RSS Ingestion
+   
+   - [Requestrr](https://github.com/darkalfx/requestrr) - Chat Bot
+   
+   - [Ombi](https://ombi.io/) - Media Requesting
+   
+   - [Radarr](https://radarr.video/) - Movie Manager
+   
+   - [Lidarr](https://lidarr.audio/) - Audio Manager
+   
+   - [Sonarr](https://sonarr.tv/) - TV Manager
+   
+   - [Miniflux](https://miniflux.app/) - RSS Reader
+   
+   - [Bookstack](https://www.bookstackapp.com/) - Documentation Storage
+
+VPN Services [[info](https://github.com/sch3p/Asgard-DNA/blob/master/README.md)]
+
+ - [Gluetun](https://github.com/qdm12/gluetun) - OpenVPN Docker client
+
+ - [Deluge](https://www.deluge-torrent.org/) - Torrent Downloader
+
+ - [Qbittorrent](https://www.qbittorrent.org/) - Torrent Downloader
+
+
 
 ### Initial Setup
 Clone where you wish to assimilate Asgard:
