@@ -1,6 +1,4 @@
-# Asgard DNA
-
-![](etc/logo.png)
+# <img width="35px" src="./etc/logo.png" alt="Asgard"></img> Asgard DNA 
 
 By going through these steps, it assumes you have the following in place:
 
