@@ -4,6 +4,31 @@ By going through these steps, it assumes you have the following in place:
  - Cloudflare API token ([more info](https://developers.cloudflare.com/api/tokens/create))
  - FQDN with relevant wildcard record
 
+### What's Included
+When new applications/services are added, this list will dynamically update. Enjoy.
+ - Databases (info)
+    - PostgreSQL
+    - MariaDB
+    - InfluxDB
+ - Application Stack (info)
+    - Traefik - Dynamic Proxy
+    - Adminer - Database Management
+    - Portainer - Docker Management
+    - Redis - Memory Caching
+    - Nextcloud - Cloud/File Storage
+    - Plex - Media Processor
+    - Tautulli - Plex Monitoring
+    - Jackett - RSS Ingestion
+    - Requestrr - Chat Bot
+    - Ombi - Media Requesting
+    - Radarr - Movie Manager
+    - Lidarr - Audio Manager
+    - Sonarr - TV Manager
+    - Miniflux - RSS Reader
+    - Bookstack - Documentation Aggregrator
+ - VPN'd Services (info)
+    
+
 ### Initial Setup
 Clone where you wish to assimilate Asgard:
 
