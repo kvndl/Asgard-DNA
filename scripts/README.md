@@ -1,5 +1,5 @@
 # Backup Scripts
-Shell script for backing up a whole docker-volume as a tar and restoring a new docker-volume from an existing tar ([credit])(https://github.com/JorgenRingen/docker-backup-volume)
+Shell script for backing up a whole docker-volume as a tar and restoring a new docker-volume from an existing tar [[credit](https://github.com/JorgenRingen/docker-backup-volume)]
 
 ##### Backing up a docker-volume
 ```
