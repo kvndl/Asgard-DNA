@@ -103,9 +103,7 @@ To ensure everything stood up correctly, visit Traefik's Dashboard:
 
     https://traefik.<<domain>.com
 
-#### The Stack
-
-Each service is available at their respective sub-domain:
+Each service should be available at their respective sub-domain:
 
     https://service.<<domain>.com
 
