@@ -6,7 +6,13 @@ By going through these steps, it assumes you have the following in place:
  - FQDN with relevant wildcard record
 
 ### What's Included
-When new applications/services are added, this list will dynamically update. Enjoy.
+
+- Fully-automated, reverse proxied, subdomain-based stack
+- Media server capable of grabbing releases in a wide-range of mediums
+- Cloud drive to collaborate, serve, and share files
+- Database management via Adminer
+- RSS ingestion (optionally) with API access
+- VPN'd select services to route traffic from ISP  
 
 Databases [[info](https://github.com/sch3p/Asgard-DNA/blob/master/README.md)]
 
@@ -93,5 +99,13 @@ Now that all the setup is out of the way, run the following to start up the engi
 
     docker-compose -f htpc/docker-compose.yml up -d
 
-Assuming all environment variables are correctly set, you should instantly have a wide-range of services available to you. 
+To ensure everything stood up correctly, visit Traefik's Dashboard:
+
+    https://traefik.<<domain>.com
+
+#### The Stack
+
+Each service is available at their respective sub-domain:
+
+    https://service.<<domain>.com
 
