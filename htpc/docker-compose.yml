@@ -22,7 +22,7 @@ services:
          - /var/run/docker.sock:/var/run/docker.sock:ro
          - ${DOCKER_DIR}/traefik/data/traefik.yml:/traefik.yml:ro
          - ${DOCKER_DIR}/traefik/data/acme.json:/acme.json
-         - ${DOCKER_DIR}/traefik/data/config.yml:/config.yml:ro
+         - ${DOCKER_DIR}/traefik/data/config.toml:/config.toml:ro
          - ${DOCKER_DIR}/traefik/data/traefik.log:/traefik.log
       environment:
          - CF_API_EMAIL=${CF_API_EMAIL}
@@ -32,18 +32,18 @@ services:
          - traefik.enable=true
          ## Routers Rules
          - traefik.http.routers.traefik-rtr.rule=Host(`traefik.${DOMAINNAME}`)
-         - traefik.http.routers.traefik-rtr.entrypoints=https
+         - traefik.http.routers.traefik-rtr.entrypoints=web-secure
          - traefik.http.routers.traefik-rtr.service=api@internal
          - traefik.http.routers.traefik-rtr.tls=true
          - traefik.http.routers.traefik-rtr.tls.certresolver=cloudflare
          - traefik.http.routers.traefik-rtr.middlewares=traefik-auth
          ## Middlewares Rules
-         - traefik.http.middlewares.redirect-to-https.redirectscheme.scheme=http
          - traefik.http.middlewares.traefik-auth.basicauth.users=${HTTP_ENCRYPTED_CREDS}
-         ## Global HTTPS Redirect
+         ## Global HTTP -> HTTPS Redirect
          - traefik.http.routers.http-catchall.rule=hostregexp(`{host:.+}`)
-         - traefik.http.routers.http-catchall.entrypoints=https
-         - traefik.http.routers.http-catchall.middlewares=redirect-to-https
+         - traefik.http.routers.http-catchall.entrypoints=web-secure
+         - traefik.http.routers.http-catchall.middlewares=redirect-to-https@docker
+         - traefik.http.middlewares.redirect-to-https.redirectscheme.scheme=https
 
    miniflux:
       container_name: miniflux
@@ -70,9 +70,9 @@ services:
          - traefik.enable=true
          ## Routers Rules
          - traefik.http.routers.rss-secure.rule=Host(`rss.${DOMAINNAME}`)
-         - traefik.http.routers.rss-secure.entrypoints=https
+         - traefik.http.routers.rss-secure.entrypoints=web-secure
          - traefik.http.routers.rss-secure.tls=true
-         - traefik.http.routers.rss-secure.tls.certresolver=http
+         - traefik.http.routers.rss-secure.tls.certresolver=web
          ## Load Balance
          - traefik.http.services.rss-secure.loadbalancer.server.port=8080
          
@@ -92,10 +92,10 @@ services:
          ## Traefik
          - traefik.enable=true
          ## Router Rules
-         - traefik.http.routers.adminer-secure.entrypoints=https
+         - traefik.http.routers.adminer-secure.entrypoints=web-secure
          - traefik.http.routers.adminer-secure.rule=Host(`adminer.${DOMAINNAME}`)
          - traefik.http.routers.adminer-secure.tls=true
-         - traefik.http.routers.adminer-secure.tls.certresolver=http
+         - traefik.http.routers.adminer-secure.tls.certresolver=web
          - traefik.http.routers.adminer-secure.service=adminer
          ## Load Balance
          - traefik.http.services.adminer.loadbalancer.server.port=8080
@@ -134,10 +134,10 @@ services:
          ## Routers
          - traefik.http.routers.cloud-secure.rule=Host(`cloud.${DOMAINNAME}`)
          - traefik.http.routers.cloud-secure.middlewares=cloud,cloud_dav,cloud_wellknown
-         - traefik.http.routers.cloud-secure.entrypoints=https
+         - traefik.http.routers.cloud-secure.entrypoints=web-secure
          - traefik.http.routers.cloud-secure.tls=true
-         - traefik.tls.routers.cloud-secure.tls.passthrough=https
-         - traefik.http.routers.cloud-secure.tls.certresolver=http
+         - traefik.tls.routers.cloud-secure.tls.passthrough=web-secure
+         - traefik.http.routers.cloud-secure.tls.certresolver=web
          - traefik.http.routers.cloud-secure.service=cloud
          ## Middlewares - headers
          - traefik.http.middlewares.cloud.headers.stsSeconds=155520011
@@ -200,10 +200,10 @@ services:
          ## Traefik
          - traefik.enable=true
          ## Router Rules
-         - traefik.http.routers.tautulli-secure.entrypoints=https
+         - traefik.http.routers.tautulli-secure.entrypoints=web-secure
          - traefik.http.routers.tautulli-secure.rule=Host(`tautulli.${DOMAINNAME}`)
          - traefik.http.routers.tautulli-secure.tls=true
-         - traefik.http.routers.tautulli-secure.tls.certresolver=http
+         - traefik.http.routers.tautulli-secure.tls.certresolver=web
          - traefik.http.routers.tautulli-secure.service=tautulli
          ## Load Balance
          - traefik.http.services.tautulli.loadbalancer.server.port=8181
@@ -229,41 +229,13 @@ services:
          ## Traefik
          - traefik.enable=true
          ## Router Rules
-         - traefik.http.routers.lidarr-secure.entrypoints=https
+         - traefik.http.routers.lidarr-secure.entrypoints=web-secure
          - traefik.http.routers.lidarr-secure.rule=Host(`lidarr.${DOMAINNAME}`)
          - traefik.http.routers.lidarr-secure.tls=true
-         - traefik.http.routers.lidarr-secure.tls.certresolver=http
+         - traefik.http.routers.lidarr-secure.tls.certresolver=web
          - traefik.http.routers.lidarr-secure.service=lidarr
          ## Load Balance
          - traefik.http.services.lidarr.loadbalancer.server.port=8686
-
-   jackett:
-      image: ghcr.io/linuxserver/jackett
-      container_name: jackett
-      restart: unless-stopped
-      security_opt:
-         - no-new-privileges:true
-      networks:
-         - proxy
-      environment:
-         - PUID=${UID}
-         - PGID=${UID}
-         - TZ=${TZ}
-      volumes:
-         - ${DOCKER_DIR}/htpc/jackett:/config
-         - ${DL_DIR}:/downloads
-         - /etc/localtime:/etc/localtime:ro
-      labels:
-         ## Traefik
-         - traefik.enable=true
-         ## Router Rules
-         - traefik.http.routers.jackett-secure.entrypoints=https
-         - traefik.http.routers.jackett-secure.rule=Host(`jackett.${DOMAINNAME}`)
-         - traefik.http.routers.jackett-secure.tls=true
-         - traefik.http.routers.jackett-secure.tls.certresolver=http
-         - traefik.http.routers.jackett-secure.service=jackett
-         ## Load Balance
-         - traefik.http.services.jackett.loadbalancer.server.port=9117
 
    requestrr:
       image: darkalfx/requestrr
@@ -280,10 +252,10 @@ services:
          ## Traefik
          - traefik.enable=true
          ## Router Rules
-         - traefik.http.routers.requestrr-secure.entrypoints=https
+         - traefik.http.routers.requestrr-secure.entrypoints=web-secure
          - traefik.http.routers.requestrr-secure.rule=Host(`requestrr.${DOMAINNAME}`)
          - traefik.http.routers.requestrr-secure.tls=true
-         - traefik.http.routers.requestrr-secure.tls.certresolver=http
+         - traefik.http.routers.requestrr-secure.tls.certresolver=web
          - traefik.http.routers.requestrr-secure.service=requestrr
          ## Load Balance
          - traefik.http.services.requestrr.loadbalancer.server.port=4545
@@ -307,10 +279,10 @@ services:
          ## Traefik
          - traefik.enable=true
          ## Router Rules
-         - traefik.http.routers.ombi-secure.entrypoints=https
+         - traefik.http.routers.ombi-secure.entrypoints=web-secure
          - traefik.http.routers.ombi-secure.rule=Host(`plexrequest.${DOMAINNAME}`)
          - traefik.http.routers.ombi-secure.tls=true
-         - traefik.http.routers.ombi-secure.tls.certresolver=http
+         - traefik.http.routers.ombi-secure.tls.certresolver=web
          - traefik.http.routers.ombi-secure.service=ombi
          ## Load Balance
          - traefik.http.services.ombi.loadbalancer.server.port=3579
@@ -336,10 +308,10 @@ services:
          ## Traefik
          - traefik.enable=true
          ## Router Rules
-         - traefik.http.routers.radarr-secure.entrypoints=https
+         - traefik.http.routers.radarr-secure.entrypoints=web-secure
          - traefik.http.routers.radarr-secure.rule=Host(`radarr.${DOMAINNAME}`)
          - traefik.http.routers.radarr-secure.tls=true
-         - traefik.http.routers.radarr-secure.tls.certresolver=http
+         - traefik.http.routers.radarr-secure.tls.certresolver=web
          - traefik.http.routers.radarr-secure.service=radarr
          ## Load Balance
          - traefik.http.services.radarr.loadbalancer.server.port=7878
@@ -365,10 +337,10 @@ services:
          ## Traefik
          - traefik.enable=true
          ## Router Rules
-         - traefik.http.routers.sonarr-secure.entrypoints=https
+         - traefik.http.routers.sonarr-secure.entrypoints=web-secure
          - traefik.http.routers.sonarr-secure.rule=Host(`sonarr.${DOMAINNAME}`)
          - traefik.http.routers.sonarr-secure.tls=true
-         - traefik.http.routers.sonarr-secure.tls.certresolver=http
+         - traefik.http.routers.sonarr-secure.tls.certresolver=web
          - traefik.http.routers.sonarr-secure.service=sonarr
          ## Load Balance
          - traefik.http.services.sonarr.loadbalancer.server.port=8989
@@ -389,10 +361,10 @@ services:
          ## Traefik
          - traefik.enable=true
          ## Router Rules
-         - traefik.http.routers.portainer-secure.entrypoints=https
+         - traefik.http.routers.portainer-secure.entrypoints=web-secure
          - traefik.http.routers.portainer-secure.rule=Host(`portainer.${DOMAINNAME}`)
          - traefik.http.routers.portainer-secure.tls=true
-         - traefik.http.routers.portainer-secure.tls.certresolver=http
+         - traefik.http.routers.portainer-secure.tls.certresolver=web
          - traefik.http.routers.portainer-secure.service=portainer
          ## Load Balance
          - traefik.http.services.portainer.loadbalancer.server.port=9000
@@ -407,8 +379,6 @@ services:
          - mariadb
       ports:
          - 6875:80
-      security_opt:
-         - no-new-privileges:true
       networks:
          - proxy
       volumes:
@@ -417,19 +387,19 @@ services:
       environment:
          - PUID=${UID}
          - PGID=${GID}
-         - APP_URL=${DOMAINNAME}
-         - DB_HOST=${DB_HOST}
-         - DB_USER=${DB_USER}
-         - DB_PASS=${HTTP_ENCRYPTED_PASS}
-         - DB_DATABASE=${DB_DATABASE}
+         - DOC_APP_URL=${DOMAINNAME}
+         - DB_HOST=${DOC_DB_HOST}
+         - DB_USER=${DOC_DB_USER}
+         - DB_PASS=${SQL_PASSWORD}
+         - DB_DATABASE=${DOC_DB_DATABASE}
       labels:
          ## Traefik
          - traefik.enable=true
          ## Router Rules
-         - traefik.http.routers.bookstack-secure.entrypoints=https
+         - traefik.http.routers.bookstack-secure.entrypoints=web-secure
          - traefik.http.routers.bookstack-secure.rule=Host(`docs.${DOMAINNAME}`)
          - traefik.http.routers.bookstack-secure.tls=true
-         - traefik.http.routers.bookstack-secure.tls.certresolver=http
+         - traefik.http.routers.bookstack-secure.tls.certresolver=web
          - traefik.http.routers.bookstack-secure.service=bookstack
          ## Load Balance
          - traefik.http.services.bookstack.loadbalancer.server.port=80
@@ -444,14 +414,13 @@ services:
       cap_add:
          - NET_ADMIN
       networks:
-         - vpn
+         - proxy
       ports:
          - 8889:8888/tcp
          - 8002:8000/tcp
-         # Deluge UI
-         - 8112:8112
-         # Qbit UI
-         - 6881:6881
+         # Jackett
+         - 9117:9117
+         # Qbit
          - 8080:8080
       volumes:
          - ${DOCKER_DIR}/htpc/gluetun:/gluetun
@@ -464,53 +433,61 @@ services:
          - OPENVPN_USER=${OPENVPN_USER}
       restart: unless-stopped
 
-   deluge:
-      image: linuxserver/deluge
-      container_name: deluge
+   jackett:
+      image: ghcr.io/linuxserver/jackett
+      container_name: jackett
       network_mode: service:gluetun
       restart: unless-stopped
+      depends_on:
+         - gluetun
       security_opt:
          - no-new-privileges:true
-      environment:   
+      environment:
          - PUID=${HTPC}
-         - PGID=${UID}
+         - PGID=1001
          - TZ=${TZ}
       volumes:
-         - ${DOCKER_DIR}/vpn/deluge:/config
-         - /mnt/Singularity/gateway:/downloads
+         - ${DOCKER_DIR}/htpc/jackett:/config
+         - ${DL_DIR}:/downloads
+         - /etc/localtime:/etc/localtime:ro
       labels:
          ## Traefik
          - traefik.enable=true
          ## Router Rules
-         - traefik.http.routers.deluge-secure.entrypoints=https
-         - traefik.http.routers.deluge-secure.rule=Host(`deluge.${DOMAINNAME}`)
-         - traefik.http.routers.deluge-secure.tls=true
-         - traefik.http.routers.deluge-secure.tls.certresolver=cloudflare
-         - traefik.http.routers.deluge-secure.service=deluge
+         - traefik.http.routers.jackett-secure.entrypoints=web-secure
+         - traefik.http.routers.jackett-secure.rule=Host(`jackett.${DOMAINNAME}`)
+         - traefik.http.routers.jackett-secure.tls=true
+         - traefik.http.routers.jackett-secure.tls.certresolver=web
+         - traefik.http.routers.jackett-secure.service=jackett
          ## Load Balance
-         - traefik.http.services.deluge.loadbalancer.server.port=8112
+         - traefik.http.services.jackett.loadbalancer.server.port=9117
 
    qbit:
       image: ghcr.io/linuxserver/qbittorrent
       container_name: qbit
-      restart: unless-stopped
       network_mode: service:gluetun
+      restart: unless-stopped
+      depends_on:
+         - gluetun
+      security_opt:
+         - no-new-privileges:true
       volumes:
          - /etc/localtime:/etc/localtime:ro
          - ${DOCKER_DIR}/htpc/qbit:/config
          - ${DL_DIR}:/downloads
       environment:
-         - PUID=${UID}
-         - PGID=${GID}
+         - PUID=${HTPC}
+         - PGID=1001
+         - TZ=${TZ}
          - WEBUI_PORT=${QBIT_WEBUI_PORT}
       labels:
          ## Traefik
          - traefik.enable=true
          ## Router Rules
-         - traefik.http.routers.qbit-secure.entrypoints=https
+         - traefik.http.routers.qbit-secure.entrypoints=web-secure
          - traefik.http.routers.qbit-secure.rule=Host(`qbit.${DOMAINNAME}`)
          - traefik.http.routers.qbit-secure.tls=true
-         - traefik.http.routers.qbit-secure.tls.certresolver=cloudflare
+         - traefik.http.routers.qbit-secure.tls.certresolver=web
          - traefik.http.routers.qbit-secure.service=qbit
          ## Load Balance
          - traefik.http.services.qbit.loadbalancer.server.port=8080
@@ -546,27 +523,19 @@ services:
       ports:
          - 8086:8086
       volumes:
-         - influxdb:/var/lib/influxdb
+         - influxdb:/.influxdbv2
          - /etc/localtime:/etc/localtime:ro
-      environment: 
-         - DOCKER_INFLUXDB_INIT_USERNAME=${DOCKER_INFLUXDB_INIT_USERNAME}
-         - DOCKER_INFLUXDB_INIT_PASSWORD=${DOCKER_INFLUXDB_INIT_PASSWORD}
-         - DOCKER_INFLUXDB_INIT_ORG=${DOCKER_INFLUXDB_INIT_ORG}
-         - DOCKER_INFLUXDB_INIT_BUCKET=${DOCKER_INFLUXDB_INIT_BUCKET}
       labels:
          ## Traefik
          - traefik.enable=true
          ## Router Rules
-         - traefik.http.routers.influx-secure.entrypoints=https
+         - traefik.http.routers.influx-secure.entrypoints=web-secure
          - traefik.http.routers.influx-secure.rule=Host(`influx.${DOMAINNAME}`)
          - traefik.http.routers.influx-secure.tls=true
-         - traefik.http.routers.influx-secure.tls.certresolver=http
+         - traefik.http.routers.influx-secure.tls.certresolver=web
          - traefik.http.routers.influx-secure.service=influx
          ## Load Balance
          - traefik.http.services.influx.loadbalancer.server.port=8086
-         ## Basic Auth
-         - traefik.http.routers.influx-secure.middlewares=influx-auth
-         - traefik.http.middlewares.influx-auth.basicauth.users=${HTTP_ENCRYPTED_CREDS}
 
    mariadb:
       image: ghcr.io/linuxserver/mariadb:alpine
@@ -586,8 +555,8 @@ services:
          - PGID=${GID}
          - MYSQL_ROOT_PASSWORD=${SQL_PASSWORD}
          - TZ=${TZ}
-         - MYSQL_DATABASE=${SQL_DATABASE}
-         - MYSQL_USER=${SQL_USER}
+         - MYSQL_DATABASE=${DOC_DB_DATABASE}
+         - MYSQL_USER=${DOC_DB_USER}
          - MYSQL_PASSWORD=${SQL_PASSWORD}
 
 ##############
@@ -596,8 +565,6 @@ services:
 
 networks:
    proxy:
-      external: true
-   vpn:
       external: true
 
 ###########

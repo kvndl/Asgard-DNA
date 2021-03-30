@@ -1,21 +1,4 @@
-http:
+web:
   middlewares:
-    https-redirect:
-      redirectScheme:
-        scheme: https
-
-    default-headers:
-      headers:
-        frameDeny: true
-        sslRedirect: true
-        browserXssFilter: true
-        contentTypeNosniff: true
-        forceSTSHeader: true
-        stsIncludeSubdomains: true
-        stsPreload: true
-        stsSeconds: 155520011
-        referrerPolicy: no-referrer
-        featurePolicy: true
-        contentTypeNosniff: true
-        stsPreload: true
-        SSLHost: ${DOMAINNAME}
+    redirecttohttps:
+      entryPoints
