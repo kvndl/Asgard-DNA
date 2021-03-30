@@ -63,10 +63,18 @@ VPN Services [[info](https://github.com/sch3p/Asgard-DNA/blob/master/README.md)]
 
 
 ### Initial Setup
+
 Clone where you wish to assimilate Asgard:
 
     git clone https://github.com/sch3p/Asgard-DNA.git
     cd Asgard-DNA
+
+Ensure Docker and Docker Compose are installed on the target system [[official docs](https://docs.docker.com/compose/install/)]
+
+- Ubuntu/Debian: `sh scripts/docker-setup/ubuntu.sh`
+- CentOS/RHEL: `sh scripts/docker-setup/rhel.sh` <- WIP
+- Fedora: `sh scripts/docker-setup/fedora.sh` <- WIP
+- Arch: `sh scripts/docker-setup/arch.sh` <- WIP
 
 Rename some files and edit to your liking -- both files explain what values should be where:
 
