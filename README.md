@@ -56,8 +56,6 @@ VPN Services [[info](https://github.com/sch3p/Asgard-DNA/blob/master/README.md)]
 
  - [Gluetun](https://github.com/qdm12/gluetun) - OpenVPN Docker client
 
- - [Deluge](https://www.deluge-torrent.org/) - Torrent Downloader
-
  - [Qbittorrent](https://www.qbittorrent.org/) - Torrent Downloader
 
  - [Jackett](https://github.com/Jackett/Jackett) - RSS Indexer
