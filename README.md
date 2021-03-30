@@ -32,8 +32,6 @@ Application Stack [[info](https://github.com/sch3p/Asgard-DNA/blob/master/README
    
    - [Tautulli](https://tautulli.com/) - Plex Monitoring
    
-   - [Jackett](https://github.com/Jackett/Jackett) - RSS Ingestion
-   
    - [Requestrr](https://github.com/darkalfx/requestrr) - Chat Bot
    
    - [Ombi](https://ombi.io/) - Media Requesting
@@ -56,6 +54,8 @@ VPN Services [[info](https://github.com/sch3p/Asgard-DNA/blob/master/README.md)]
 
  - [Qbittorrent](https://www.qbittorrent.org/) - Torrent Downloader
 
+ - [Jackett](https://github.com/Jackett/Jackett) - RSS Indexer
+
 
 
 ### Initial Setup
@@ -76,10 +76,9 @@ In order to retain volume information between boots, manually create the followi
     docker volume create redis 	&& \
     docker volume create nextcloud-www
 
-Do the same for the networks the stack is using:
+Do the same for the network the stack is using:
 
-    docker network create proxy && \
-    docker network create vpn
+    docker network create proxy
 
 #### Optional:
 Run [ctop](https://github.com/bcicen/ctop) container to monitor instances:
@@ -93,5 +92,6 @@ Run [ctop](https://github.com/bcicen/ctop) container to monitor instances:
 Now that all the setup is out of the way, run the following to start up the engines:
 
     docker-compose -f htpc/docker-compose.yml up -d
+
 Assuming all environment variables are correctly set, you should instantly have a wide-range of services available to you. 
 

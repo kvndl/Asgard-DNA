@@ -40,18 +40,13 @@ TRUSTED_PROXIES="<<traefik proxy>>"
 NC_UID="<<nextcloud data user uid>>"
 NC_GID="<<nextcloud data user gid>>"
 
-DOCKER_INFLUXDB_INIT_USERNAME="<<custom username>>"
-DOCKER_INFLUXDB_INIT_PASSWORD="<<secure pass>>"
-DOCKER_INFLUXDB_INIT_ORG="<<custom org name>>"
-DOCKER_INFLUXDB_INIT_BUCKET="<<custom bucket name>>"
-
 CF_API_EMAIL="<<cloudflare email address>>"
 CF_API_KEY="<<cloudflare api key>>"
 
 HTTP_ENCRYPTED_CREDS="<<htpass user:pass format>>"
 HTTP_ENCRYPTED_PASS="<<htpass encrypted pass>>"
 
-APP_URL="<<https://docs.domain.com>>"
+DOC_APP_URL="<<https://docs.domain.com>>"
 DOC_DB_HOST="mariadb"
 DOC_DB_USER="bookstack"
 DOC_DB_DATABASE="bookstack"
