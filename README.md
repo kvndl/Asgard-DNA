@@ -16,6 +16,8 @@ By going through these steps, it assumes you have the following in place:
 
 Databases [[info](https://github.com/sch3p/Asgard-DNA/blob/master/README.md)]
 
+- [MongoDB](https://www.mongodb.com)
+
 - [PostgreSQL](https://www.postgresql.org)
 
 - [MariaDB](https://mariadb.org/)
@@ -40,7 +42,7 @@ Application Stack [[info](https://github.com/sch3p/Asgard-DNA/blob/master/README
    
    - [Requestrr](https://github.com/darkalfx/requestrr) - Chat Bot
    
-   - [Ombi](https://ombi.io/) - Media Requesting
+   - [Petio](https://petio.tv/) - Media Requesting
    
    - [Radarr](https://radarr.video/) - Movie Manager
    
@@ -51,6 +53,10 @@ Application Stack [[info](https://github.com/sch3p/Asgard-DNA/blob/master/README
    - [Miniflux](https://miniflux.app/) - RSS Reader
    
    - [Bookstack](https://www.bookstackapp.com/) - Documentation Storage
+
+   - [Ghost](https://ghost.org/) - Blogging CMS
+
+   - [Heimdall](https://github.com/linuxserver/Heimdall) - Service Dashboard
 
 VPN Services [[info](https://github.com/sch3p/Asgard-DNA/blob/master/README.md)]
 
@@ -83,6 +89,7 @@ Rename some files and edit to your liking -- both files explain what values shou
 
 In order to retain volume information between boots, manually create the following volumes:
 
+    docker volume create mongodb    && \
     docker volume create postgres 	&& \
     docker volume create influxdb 	&& \
     docker volume create redis 	&& \

@@ -12,6 +12,9 @@ htpc/ombi/*
 htpc/petio-beta/*
 htpc/plexmediaserver/*
 htpc/portainer/*
+htpc/heimdall/*
+authelia/
+htpc/petio/
 htpc/qbit/*
 htpc/radarr/*
 htpc/requestrr/*

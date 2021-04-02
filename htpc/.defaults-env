@@ -19,8 +19,8 @@ MINIFLUX_ADMIN_USER="admin"
 MINIFLUX_ADMIN_PASS="<<secure pass>>"
 MINIFLUX_DB_CONN_STRING="postgres://miniflux:<<secure pass>>@postgres/miniflux?sslmode=disable"
 
+HOME_DIR="<<home directory>>"
 DOCKER_DIR="<<docker data directory>>"
-
 TV_DIR="<<htpc tv directory>>"
 MOVIE_DIR="<<htpc movie directory>>"
 MUSIC_DIR="<<htpc music directory>>"
@@ -52,3 +52,7 @@ DOC_DB_USER="bookstack"
 DOC_DB_DATABASE="bookstack"
 
 QBIT_WEBUI_PORT="8080"
+
+GHOST_URL="https://blog.domain.com"
+
+CODE_PASS="<<secure pass>>"

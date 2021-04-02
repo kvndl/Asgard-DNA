@@ -45,6 +45,35 @@ services:
          - traefik.http.routers.http-catchall.middlewares=redirect-to-https@docker
          - traefik.http.middlewares.redirect-to-https.redirectscheme.scheme=https
 
+   heimdall:
+      container_name: heimdall
+      image: ghcr.io/linuxserver/heimdall
+      restart: unless-stopped
+      ports:
+         - 89:443
+      security_opt:
+         - no-new-privileges:true
+      networks:
+         - proxy
+      environment: 
+         - PUID=${UID}
+         - PGID=${GID}
+         - TZ=${TZ}
+      volumes:
+         - ${DOCKER_DIR}/htpc/heimdall:/config
+         - /etc/localtime:/etc/localtime:ro
+      labels:
+         ## Traefik
+         - traefik.enable=true
+         ## Router Rules
+         - traefik.http.routers.heimdall-secure.entrypoints=web-secure
+         - traefik.http.routers.heimdall-secure.rule=Host(`dash.${DOMAINNAME}`)
+         - traefik.http.routers.heimdall-secure.tls=true
+         - traefik.http.routers.heimdall-secure.tls.certresolver=web
+         - traefik.http.routers.heimdall-secure.service=heimdall
+         ## Load Balance
+         - traefik.http.services.heimdall.loadbalancer.server.port=443
+
    miniflux:
       container_name: miniflux
       image: miniflux/miniflux:latest
@@ -208,6 +237,37 @@ services:
          ## Load Balance
          - traefik.http.services.tautulli.loadbalancer.server.port=8181
 
+   code:
+      image: ghcr.io/linuxserver/code-server
+      container_name: code
+      restart: unless-stopped
+      security_opt:
+         - no-new-privileges:true
+      networks:
+         - proxy
+      ports:
+         - 8443:8443
+      environment:
+         - PUID=${UID}
+         - PGID=${GID}
+         - TZ=${TZ}
+         - PASSWORD=${CODE_PASS}
+      volumes:
+         - /etc/localtime:/etc/localtime:ro
+         - ${DOCKER_DIR}:/docker
+         - ${HOME_DIR}:/home
+      labels:
+         ## Traefik
+         - traefik.enable=true
+         ## Router Rules
+         - traefik.http.routers.code-secure.entrypoints=web-secure
+         - traefik.http.routers.code-secure.rule=Host(`code.${DOMAINNAME}`)
+         - traefik.http.routers.code-secure.tls=true
+         - traefik.http.routers.code-secure.tls.certresolver=web
+         - traefik.http.routers.code-secure.service=code
+         ## Load Balance
+         - traefik.http.services.code.loadbalancer.server.port=8443
+
    lidarr:
       image: ghcr.io/linuxserver/lidarr:develop
       container_name: lidarr
@@ -218,7 +278,7 @@ services:
          - proxy
       environment:
          - PUID=${HTPC}
-         - PGID=1001
+         - PGID=${GID}
          - TZ=${TZ}
       volumes:
          - ${DOCKER_DIR}/htpc/lidarr:/config
@@ -259,33 +319,6 @@ services:
          - traefik.http.routers.requestrr-secure.service=requestrr
          ## Load Balance
          - traefik.http.services.requestrr.loadbalancer.server.port=4545
-
-   ombi:
-      image: ghcr.io/linuxserver/ombi
-      container_name: ombi
-      restart: unless-stopped
-      security_opt:
-         - no-new-privileges:true
-      networks:
-         - proxy
-      environment:
-         - PUID=${UID}
-         - PGID=${UID}
-         - TZ=${TZ}
-      volumes:
-         - ${DOCKER_DIR}/htpc/ombi:/config
-         - /etc/localtime:/etc/localtime:ro
-      labels:
-         ## Traefik
-         - traefik.enable=true
-         ## Router Rules
-         - traefik.http.routers.ombi-secure.entrypoints=web-secure
-         - traefik.http.routers.ombi-secure.rule=Host(`plexrequest.${DOMAINNAME}`)
-         - traefik.http.routers.ombi-secure.tls=true
-         - traefik.http.routers.ombi-secure.tls.certresolver=web
-         - traefik.http.routers.ombi-secure.service=ombi
-         ## Load Balance
-         - traefik.http.services.ombi.loadbalancer.server.port=3579
 
    radarr:
       image: ghcr.io/linuxserver/radarr:nightly
@@ -404,6 +437,64 @@ services:
          ## Load Balance
          - traefik.http.services.bookstack.loadbalancer.server.port=80
 
+   ghost:
+      image: ghost:latest
+      container_name: ghost
+      restart: unless-stopped
+      security_opt:
+         - no-new-privileges:true
+      networks:
+         - proxy
+      ports:
+         - 3001:2368
+      environment:
+         - url=${GHOST_URL}
+      volumes:
+         - ghost-data:/var/lib/ghost/content
+         - /etc/localtime:/etc/localtime:ro
+      labels:
+         ## Traefik
+         - traefik.enable=true
+         ## Router Rules
+         - traefik.http.routers.ghost-secure.entrypoints=web-secure
+         - traefik.http.routers.ghost-secure.rule=Host(`blog.${DOMAINNAME}`)
+         - traefik.http.routers.ghost-secure.tls=true
+         - traefik.http.routers.ghost-secure.tls.certresolver=web
+         - traefik.http.routers.ghost-secure.service=ghost
+         ## Load Balance
+         - traefik.http.services.ghost.loadbalancer.server.port=2368
+
+   petio:
+      image: ghcr.io/petio-team/petio:latest
+      container_name: petio
+      restart: unless-stopped
+      security_opt:
+         - no-new-privileges
+      networks:
+         - proxy
+      ports:
+         - 7777:7777
+      depends_on:
+         - mongo
+      environment:
+         - TZ=${TZ}
+      volumes:
+         - ${DOCKER_DIR}/htpc/petio/config:/app/api/config
+         - ${DOCKER_DIR}/htpc/petio/logs:/app/logs
+         - /etc/localtime:/etc/localtime:ro
+      labels:
+         ## Traefik
+         - traefik.enable=true
+         ## Router Rules
+         - traefik.http.routers.petio-secure.entrypoints=web-secure
+         - traefik.http.routers.petio-secure.rule=Host(`plexrequest.${DOMAINNAME}`)
+         - traefik.http.routers.petio-secure.tls=true
+         - traefik.http.routers.petio-secure.tls.certresolver=web
+         - traefik.http.routers.petio-secure.service=petio
+         ## Load Balance
+         - traefik.http.services.petio.loadbalancer.server.port=7777
+      
+
 ################
 # VPN Services #
 ################
@@ -496,6 +587,20 @@ services:
 # Database Services #
 #####################
 
+   mongo:
+      container_name: mongo
+      image: mongo:latest
+      restart: unless-stopped
+      security_opt:
+         - no-new-privileges
+      networks:
+         - proxy
+      ports:
+         - 27017:27017
+      volumes:
+         - mongodb:/data/db
+         - /etc/localtime:/etc/localtime:ro
+
    postgres:
       container_name: postgres
       image: postgres:latest
@@ -572,6 +677,8 @@ networks:
 ###########
 
 volumes:
+   ghost-data:
+      external: true
    postgres:
       external: true
    influxdb:
@@ -581,4 +688,6 @@ volumes:
    redis:
       external: true
    nextcloud-www:
+      external: true
+   mongodb:
       external: true
